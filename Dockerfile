@@ -23,9 +23,6 @@ RUN curl -LsSf https://mistral.ai/vibe/install.sh | bash && \
         echo "ERROR: Vibe binary not found after installation" && exit 1; \
     fi
 
-# Set up environment
-ENV HTTPS_PROXY=""
-
 # Create config directory
 RUN mkdir -p /root/.vibe
 
