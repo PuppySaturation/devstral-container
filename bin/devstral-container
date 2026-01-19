@@ -23,6 +23,8 @@ OPTIONS:
     --proxy         Enable API request/response logging via proxy
     --no-proxy      Disable proxy (default)
     --datasette     Start Datasette web interface for viewing logs (implies --proxy)
+    --migrate-logs  Compact streaming responses in existing logs
+    --dry-run       Preview migration without applying changes
     -h, --help      Show this help message
 
 COMMAND:
@@ -32,6 +34,7 @@ EXAMPLES:
     devstral-container                    # Interactive mode without logging
     devstral-container --proxy            # Interactive mode with API logging
     devstral-container --datasette        # Interactive mode with logging and web UI
+    devstral-container --migrate-logs     # Compact old streaming logs
     devstral-container "analyze the code" # Run specific command
 
 EOF
@@ -40,6 +43,8 @@ EOF
 # Parse arguments
 ENABLE_PROXY=false
 ENABLE_DATASETTE=false
+MIGRATE_LOGS=false
+DRY_RUN=false
 VIBE_COMMAND=""
 
 while [[ $# -gt 0 ]]; do
@@ -57,6 +62,14 @@ while [[ $# -gt 0 ]]; do
             ENABLE_DATASETTE=true
             shift
             ;;
+        --migrate-logs)
+            MIGRATE_LOGS=true
+            shift
+            ;;
+        --dry-run)
+            DRY_RUN=true
+            shift
+            ;;
         -h|--help)
             show_usage
             exit 0
@@ -71,6 +84,31 @@ done
 # Create config directory if it doesn't exist
 mkdir -p "${CONFIG_DIR}/config"
 mkdir -p "${CONFIG_DIR}/proxy"
+
+# Handle log migration
+if [[ "$MIGRATE_LOGS" == true ]]; then
+    VERSION="${DEVSTRAL_CONTAINER_VERSION:-0.1.2}"
+    DATASETTE_IMAGE="nezhar/devstral-datasette:${VERSION}"
+
+    if [[ ! -f "${CONFIG_DIR}/proxy/logs.db" ]]; then
+        echo -e "${YELLOW}No logs database found at ${CONFIG_DIR}/proxy/logs.db${NC}"
+        exit 1
+    fi
+
+    MIGRATE_ARGS=("/data/logs.db")
+    if [[ "$DRY_RUN" == true ]]; then
+        MIGRATE_ARGS+=("--dry-run")
+        echo -e "${GREEN}Previewing migration (dry run)...${NC}"
+    else
+        echo -e "${GREEN}Migrating streaming logs to compacted format...${NC}"
+    fi
+
+    docker run --rm \
+        -v "${CONFIG_DIR}/proxy:/data" \
+        "$DATASETTE_IMAGE" \
+        migrate-logs "${MIGRATE_ARGS[@]}"
+    exit 0
+fi
 
 # Store the original working directory before changing to project dir
 export WORKSPACE_DIR="${PWD}"
@@ -113,7 +151,7 @@ else
 fi
 
 # Set image details
-VERSION="${DEVSTRAL_CONTAINER_VERSION:-0.1.1}"
+VERSION="${DEVSTRAL_CONTAINER_VERSION:-0.1.2}"
 IMAGE="nezhar/devstral-cli:${VERSION}"
 PROXY_IMAGE="nezhar/devstral-proxy:${VERSION}"
 DATASETTE_IMAGE="nezhar/devstral-datasette:${VERSION}"

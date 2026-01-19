@@ -8,8 +8,12 @@ RUN pip install --no-cache-dir \
 
 WORKDIR /data
 
+# Copy migration script
+COPY migrate_logs.py /usr/local/bin/migrate-logs
+RUN chmod +x /usr/local/bin/migrate-logs
+
 # Expose datasette port
 EXPOSE 8001
 
-# Run datasette with the logs database
+# Default: run datasette with the logs database
 CMD ["datasette", "/data/logs.db", "--host", "0.0.0.0", "--port", "8001", "--setting", "sql_time_limit_ms", "10000"]
