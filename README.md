@@ -20,7 +20,7 @@ This project consists of three Docker images:
 The main container running Mistral's Vibe CLI. Mounts your workspace directory and persists configuration to `~/.config/devstral-container/config`.
 
 ### 2. devstral-proxy (optional)
-An mitmproxy-based HTTPS proxy that intercepts and logs all API calls to Mistral. Logs are stored in a SQLite database at `~/.config/devstral-container/proxy/logs.db`.
+An mitmproxy-based reverse proxy that intercepts and logs all API calls to Mistral. Similar to [claude-container](https://github.com/nezhar/claude-container), it only proxies API traffic by overriding the Mistral provider configuration, not all HTTPS traffic. Logs are stored in a SQLite database at `~/.config/devstral-container/proxy/logs.db`.
 
 ### 3. devstral-datasette (optional)
 A web interface for exploring logged API calls. Provides filtering, sorting, SQL queries, and data export capabilities. Accessible at http://localhost:8001.
@@ -125,7 +125,19 @@ docker compose run --rm devstral-cli
 ### Run with proxy services:
 ```bash
 docker compose --profile proxy up -d devstral-proxy devstral-datasette
-docker compose run --rm -e HTTPS_PROXY=http://devstral-proxy:8080 devstral-cli
+
+# Create proxy provider config
+mkdir -p ~/.config/devstral-container/config
+cat > ~/.config/devstral-container/config/proxy-provider.toml << 'EOF'
+[[providers]]
+name = "mistral"
+api_base = "http://devstral-proxy:8080/v1"
+api_key_env_var = "MISTRAL_API_KEY"
+api_style = "openai"
+backend = "mistral"
+EOF
+
+docker compose run --rm --network devstral-network devstral-cli
 ```
 
 ### Stop proxy services:
@@ -175,6 +187,10 @@ docker compose logs devstral-proxy
 ```
 
 3. The proxy automatically handles SSL certificates. On first run with proxy, it may take a moment to generate certificates.
+
+**Note**: The proxy works by overriding the Mistral provider configuration to route API calls through the proxy (similar to how [claude-container](https://github.com/nezhar/claude-container) uses `ANTHROPIC_BASE_URL`). This ensures only Mistral API traffic is proxied, not all HTTPS traffic, preventing network errors for other connections.
+
+When you run with `--proxy`, a `proxy-provider.toml` file is automatically created in `~/.config/devstral-container/config/` that overrides the default Mistral provider to use `http://devstral-proxy:8080/v1`. When you run without the proxy, this file is removed.
 
 ### Permission Issues
 

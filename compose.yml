@@ -3,47 +3,16 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: "nezhar/devstral-cli:${DEVSTRAL_CONTAINER_VERSION:-0.1.0}"
-    stdin_open: true
-    tty: true
-    volumes:
-      - ${WORKSPACE_DIR:-${PWD}}:/workspace
-      - ${HOME}/.config/devstral-container/config:/root/.vibe
-      - ${HOME}/.config/devstral-container/proxy:/root/.mitmproxy
-    environment:
-      - HTTPS_PROXY=${PROXY_ENABLED:-}
-    networks:
-      - devstral-network
+    image: "nezhar/devstral-cli:${DEVSTRAL_CONTAINER_VERSION:-0.1.1}"
 
   devstral-proxy:
     build:
       context: .
       dockerfile: Dockerfile.proxy
-    image: "nezhar/devstral-proxy:${DEVSTRAL_CONTAINER_VERSION:-0.1.0}"
-    ports:
-      - "8080:8080"
-    volumes:
-      - ${HOME}/.config/devstral-container/proxy:/root/.mitmproxy
-      - ${HOME}/.config/devstral-container/proxy:/proxy/logs
-    networks:
-      - devstral-network
-    profiles:
-      - proxy
+    image: "nezhar/devstral-proxy:${DEVSTRAL_CONTAINER_VERSION:-0.1.1}"
 
   devstral-datasette:
     build:
       context: .
       dockerfile: Dockerfile.datasette
-    image: "nezhar/devstral-datasette:${DEVSTRAL_CONTAINER_VERSION:-0.1.0}"
-    ports:
-      - "8001:8001"
-    volumes:
-      - ${HOME}/.config/devstral-container/proxy:/data
-    networks:
-      - devstral-network
-    profiles:
-      - proxy
-
-networks:
-  devstral-network:
-    driver: bridge
+    image: "nezhar/devstral-datasette:${DEVSTRAL_CONTAINER_VERSION:-0.1.1}"

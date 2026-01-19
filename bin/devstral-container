@@ -75,23 +75,45 @@ mkdir -p "${CONFIG_DIR}/proxy"
 # Store the original working directory before changing to project dir
 export WORKSPACE_DIR="${PWD}"
 
-# Build profiles argument
-PROFILES=""
-if [[ "$ENABLE_PROXY" == true ]]; then
-    PROFILES="--profile proxy"
-    export PROXY_ENABLED="http://devstral-proxy:8080"
+CONFIG_FILE="${CONFIG_DIR}/config/config.toml"
+CONFIG_BACKUP="${CONFIG_DIR}/config/config.toml.backup"
 
+if [[ "$ENABLE_PROXY" == true ]]; then
     echo -e "${GREEN}Starting with API logging enabled${NC}"
+
+    # Backup existing config if it exists and hasn't been backed up yet
+    if [[ -f "$CONFIG_FILE" ]] && [[ ! -f "$CONFIG_BACKUP" ]]; then
+        cp "$CONFIG_FILE" "$CONFIG_BACKUP"
+    fi
+
+    # Create or update config.toml with proxy provider
+    cat > "$CONFIG_FILE" << 'EOF'
+# Mistral Vibe configuration with proxy enabled
+# Original config backed up to config.toml.backup
+
+[[providers]]
+name = "mistral"
+api_base = "http://devstral-proxy:8080/v1"
+api_key_env_var = "MISTRAL_API_KEY"
+api_style = "openai"
+backend = "generic"
+EOF
 
     if [[ "$ENABLE_DATASETTE" == true ]]; then
         echo -e "${GREEN}Datasette will be available at http://localhost:8001${NC}"
     fi
 else
-    export PROXY_ENABLED=""
+    # Restore original config if backup exists, otherwise remove proxy config
+    if [[ -f "$CONFIG_BACKUP" ]]; then
+        mv "$CONFIG_BACKUP" "$CONFIG_FILE"
+    elif [[ -f "$CONFIG_FILE" ]]; then
+        # Remove proxy config so vibe uses its defaults (direct to Mistral)
+        rm "$CONFIG_FILE"
+    fi
 fi
 
 # Set image details
-VERSION="${DEVSTRAL_CONTAINER_VERSION:-0.1.0}"
+VERSION="${DEVSTRAL_CONTAINER_VERSION:-0.1.1}"
 IMAGE="nezhar/devstral-cli:${VERSION}"
 PROXY_IMAGE="nezhar/devstral-proxy:${VERSION}"
 DATASETTE_IMAGE="nezhar/devstral-datasette:${VERSION}"
@@ -111,7 +133,6 @@ if [[ "$ENABLE_PROXY" == true ]]; then
         --name "$PROXY_CONTAINER_NAME" \
         --network "$NETWORK_NAME" \
         -p 8080:8080 \
-        -v "${CONFIG_DIR}/proxy:/root/.mitmproxy" \
         -v "${CONFIG_DIR}/proxy:/proxy/logs" \
         "$PROXY_IMAGE" 2>/dev/null || true
 
@@ -134,17 +155,15 @@ fi
 # Prepare docker run command
 DOCKER_ARGS=(
     --rm -it
+    --user "$(id -u):$(id -g)"
     -v "${WORKSPACE_DIR}:/workspace"
     -v "${CONFIG_DIR}/config:/root/.vibe"
-    -e "USER_UID=$(id -u)"
-    -e "USER_GID=$(id -g)"
 )
 
-# Add proxy configuration if enabled
+# Add network configuration if proxy is enabled
 if [[ "$ENABLE_PROXY" == true ]]; then
     DOCKER_ARGS+=(
         --network "$NETWORK_NAME"
-        -e "HTTPS_PROXY=http://${PROXY_CONTAINER_NAME}:8080"
     )
 fi
 

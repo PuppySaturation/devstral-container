@@ -1,10 +1,10 @@
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 # Install mitmproxy
 RUN pip install --no-cache-dir mitmproxy
 
-# Create directory for logs and scripts
-RUN mkdir -p /proxy/logs
+# Create directory for logs, scripts, and mitmproxy config
+RUN mkdir -p /proxy/logs /proxy/certs
 
 # Copy the proxy script
 COPY proxy_script.py /proxy/proxy_script.py
@@ -14,5 +14,5 @@ WORKDIR /proxy
 # Expose proxy port
 EXPOSE 8080
 
-# Run mitmproxy with the logging script
-CMD ["mitmdump", "--set", "confdir=/root/.mitmproxy", "-s", "/proxy/proxy_script.py", "--listen-host", "0.0.0.0", "--listen-port", "8080", "--ssl-insecure"]
+# Run mitmproxy in reverse proxy mode to intercept and forward to Mistral API
+CMD ["mitmdump", "--set", "confdir=/proxy/certs", "-s", "/proxy/proxy_script.py", "--listen-host", "0.0.0.0", "--listen-port", "8080", "--mode", "reverse:https://api.mistral.ai", "--ssl-insecure"]

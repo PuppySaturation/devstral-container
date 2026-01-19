@@ -26,6 +26,64 @@ def setup_database():
     conn.commit()
     conn.close()
 
+def compact_streaming_response(raw_body: str) -> str:
+    """Compact SSE streaming chunks into a single response."""
+    chunks = []
+    content_parts = []
+    metadata = {}
+
+    for line in raw_body.split('\n'):
+        line = line.strip()
+        if not line.startswith('data:'):
+            continue
+
+        data_str = line[5:].strip()
+        if data_str == '[DONE]':
+            continue
+
+        try:
+            chunk = json.loads(data_str)
+            chunks.append(chunk)
+
+            # Extract metadata from first chunk
+            if not metadata and 'id' in chunk:
+                metadata = {
+                    'id': chunk.get('id'),
+                    'model': chunk.get('model'),
+                    'created': chunk.get('created'),
+                    'object': 'chat.completion'
+                }
+
+            # Extract content from choices
+            for choice in chunk.get('choices', []):
+                delta = choice.get('delta', {})
+                if 'content' in delta and delta['content']:
+                    content_parts.append(delta['content'])
+                if 'finish_reason' in choice and choice['finish_reason']:
+                    metadata['finish_reason'] = choice['finish_reason']
+        except json.JSONDecodeError:
+            continue
+
+    if not chunks:
+        return raw_body
+
+    # Build compacted response
+    compacted = {
+        **metadata,
+        'choices': [{
+            'index': 0,
+            'message': {
+                'role': 'assistant',
+                'content': ''.join(content_parts)
+            },
+            'finish_reason': metadata.get('finish_reason', 'stop')
+        }],
+        '_streaming': True,
+        '_chunk_count': len(chunks)
+    }
+
+    return json.dumps(compacted, indent=2)
+
 setup_database()
 
 class APILogger:
@@ -33,9 +91,8 @@ class APILogger:
         self.flows = {}
 
     def request(self, flow: http.HTTPFlow) -> None:
-        # Only log Mistral API calls
-        if "api.mistral.ai" in flow.request.pretty_host:
-            self.flows[flow] = datetime.now()
+        # In reverse proxy mode, all traffic is Mistral API traffic
+        self.flows[flow] = datetime.now()
 
     def response(self, flow: http.HTTPFlow) -> None:
         if flow not in self.flows:
@@ -47,6 +104,11 @@ class APILogger:
         # Extract request data
         request_body = flow.request.content.decode('utf-8', errors='replace') if flow.request.content else ""
         response_body = flow.response.content.decode('utf-8', errors='replace') if flow.response.content else ""
+
+        # Compact streaming responses
+        content_type = flow.response.headers.get('content-type', '')
+        if 'text/event-stream' in content_type or response_body.startswith('data:'):
+            response_body = compact_streaming_response(response_body)
 
         # Store in database
         conn = sqlite3.connect(DB_PATH)
