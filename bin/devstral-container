@@ -113,8 +113,11 @@ fi
 # Store the original working directory before changing to project dir
 export WORKSPACE_DIR="${PWD}"
 
-CONFIG_FILE="${CONFIG_DIR}/config/config.toml"
-CONFIG_BACKUP="${CONFIG_DIR}/config/config.toml.backup"
+# Vibe looks for config at $HOME/.vibe/config.toml
+# With HOME=/config, that's /config/.vibe/config.toml
+mkdir -p "${CONFIG_DIR}/config/.vibe"
+CONFIG_FILE="${CONFIG_DIR}/config/.vibe/config.toml"
+CONFIG_BACKUP="${CONFIG_DIR}/config/.vibe/config.toml.backup"
 
 if [[ "$ENABLE_PROXY" == true ]]; then
     echo -e "${GREEN}Starting with API logging enabled${NC}"
@@ -195,7 +198,8 @@ DOCKER_ARGS=(
     --rm -it
     --user "$(id -u):$(id -g)"
     -v "${WORKSPACE_DIR}:/workspace"
-    -v "${CONFIG_DIR}/config:/root/.vibe"
+    -v "${CONFIG_DIR}/config:/config"
+    -e "HOME=/config"
 )
 
 # Add network configuration if proxy is enabled

@@ -5,7 +5,7 @@ A container workflow for Mistral's Devstral Vibe CLI pre-installed and ready to 
 ## Docker Hub
 
 Pre-built images available on Docker Hub:
-- [nezhar/devstral-container](https://hub.docker.com/r/nezhar/devstral-container) - Main CLI container
+- [nezhar/devstral-cli](https://hub.docker.com/r/nezhar/devstral-cli) - Main CLI container
 - [nezhar/devstral-proxy](https://hub.docker.com/r/nezhar/devstral-proxy) - Optional logging proxy
 - [nezhar/devstral-datasette](https://hub.docker.com/r/nezhar/devstral-datasette) - Optional visualization
 
@@ -38,9 +38,9 @@ On first run, you'll be prompted for your Mistral API key from https://console.m
 ```bash
 docker run --rm -it \
   -v "$(pwd):/workspace" \
-  -v "$HOME/.config/devstral-container:/config" \
-  -e "VIBE_CONFIG_DIR=/config" \
-  nezhar/devstral-container:latest
+  -v "$HOME/.config/devstral-container/config:/config" \
+  -e "HOME=/config" \
+  nezhar/devstral-cli:latest
 ```
 
 ## Features
