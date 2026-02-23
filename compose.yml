@@ -3,16 +3,16 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: "nezhar/devstral-cli:${DEVSTRAL_CONTAINER_VERSION:-0.1.3}"
+    image: "nezhar/devstral-cli:${DEVSTRAL_CONTAINER_VERSION:-0.1.4}"
 
   devstral-proxy:
     build:
       context: .
       dockerfile: Dockerfile.proxy
-    image: "nezhar/devstral-proxy:${DEVSTRAL_CONTAINER_VERSION:-0.1.3}"
+    image: "nezhar/devstral-proxy:${DEVSTRAL_CONTAINER_VERSION:-0.1.4}"
 
   devstral-datasette:
     build:
       context: .
       dockerfile: Dockerfile.datasette
-    image: "nezhar/devstral-datasette:${DEVSTRAL_CONTAINER_VERSION:-0.1.3}"
+    image: "nezhar/devstral-datasette:${DEVSTRAL_CONTAINER_VERSION:-0.1.4}"

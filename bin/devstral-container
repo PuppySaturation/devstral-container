@@ -87,7 +87,7 @@ mkdir -p "${CONFIG_DIR}/proxy"
 
 # Handle log migration
 if [[ "$MIGRATE_LOGS" == true ]]; then
-    VERSION="${DEVSTRAL_CONTAINER_VERSION:-0.1.3}"
+    VERSION="${DEVSTRAL_CONTAINER_VERSION:-4}"
     DATASETTE_IMAGE="nezhar/devstral-datasette:${VERSION}"
 
     if [[ ! -f "${CONFIG_DIR}/proxy/logs.db" ]]; then
@@ -154,7 +154,7 @@ else
 fi
 
 # Set image details
-VERSION="${DEVSTRAL_CONTAINER_VERSION:-0.1.3}"
+VERSION="${DEVSTRAL_CONTAINER_VERSION:-0.1.4}"
 IMAGE="nezhar/devstral-cli:${VERSION}"
 PROXY_IMAGE="nezhar/devstral-proxy:${VERSION}"
 DATASETTE_IMAGE="nezhar/devstral-datasette:${VERSION}"
