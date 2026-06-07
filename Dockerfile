@@ -10,7 +10,9 @@ RUN apt-get update && apt-get install -y \
 
 # Install Devstral Vibe CLI and set up PATH
 # The install script modifies shell config, so we need to source it
-RUN curl -LsSf https://mistral.ai/vibe/install.sh | bash && \
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    . "$HOME"/.local/bin/env && \
+    curl -LsSf https://mistral.ai/vibe/install.sh | bash && \
     # Source the shell profile to get the updated PATH
     if [ -f /root/.bashrc ]; then . /root/.bashrc; fi && \
     if [ -f /root/.profile ]; then . /root/.profile; fi && \
